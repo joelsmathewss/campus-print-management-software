@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}GetYourPrint — Staff Dashboard{% endblock %}
+
+{% block head %}
+<style>
+  .page { min-height: 100vh; background: var(--bg); }
+  .main { max-width: 1000px; margin: 0 auto; padding: 40px 24px; }
+
+  .header { margin-bottom: 32px; animation: fadeUp 0.4s ease both; }
+  .title  { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+  .sub    { color: var(--text-muted); font-size: 14px; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Stats row */
+  .stats-row { display: flex; gap: 16px; margin-bottom: 36px; flex-wrap: wrap; }
+  .stat-card {
+    flex: 1; min-width: 160px;
+    border-radius: 12px; padding: 18px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    animation: fadeUp 0.4s ease both;
+  }
+  .stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+  .stat-num   { font-size: 30px; font-weight: 800; font-family: "Syne"; }
+
+  /* Filters */
+  .filter-row { display: flex; gap: 8px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 7px 16px; border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted);
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .filter-btn.active { border-color: var(--accent); background: rgba(108,99,255,0.15); color: var(--accent); }
+  .auto-note { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border-radius: 16px; border: 1px solid var(--border); animation: fadeUp 0.5s ease both; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); }
+  thead tr { background: var(--surface2); }
+  th {
+    padding: 12px 16px; text-align: left;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    font-size: 14px; color: var(--text); vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: var(--surface2); }
+  tr:hover td { background: rgba(108,99,255,0.04); }
+
+  .email-cell { font-weight: 500; }
+  .file-link { color: var(--accent); font-size: 13px; text-decoration: none; }
+  .file-link:hover { text-decoration: underline; }
+  .meta-text { font-size: 12px; color: var(--text-muted); }
+
+  .status-pill {
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    display: inline-block;
+  }
+  .status-pending  { background: rgba(245,200,66,0.1);  color: var(--yellow); border: 1px solid rgba(245,200,66,0.3); }
+  .status-printing { background: rgba(108,99,255,0.1); color: var(--accent); border: 1px solid rgba(108,99,255,0.3); }
+  .status-completed{ background: rgba(62,207,142,0.1);  color: var(--green);  border: 1px solid rgba(62,207,142,0.3); }
+
+  .action-row { display: flex; gap: 6px; align-items: center; }
+  .action-btn {
+    padding: 5px 12px; border-radius: 6px;
+    border: 1px solid; background: transparent;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .action-btn.start  { border-color: var(--accent); color: var(--accent); }
+  .action-btn.start:hover  { background: rgba(108,99,255,0.15); }
+  .action-btn.done   { border-color: var(--green); color: var(--green); }
+  .action-btn.done:hover   { background: rgba(62,207,142,0.15); }
+  .action-btn.del    { border-color: var(--border); color: var(--text-muted); }
+  .action-btn.del:hover    { border-color: var(--red); color: var(--red); }
+
+  .opts-tag { font-size: 11px; display: block; }
+  .opts-colour { color: var(--accent); }
+  .opts-double { color: var(--green); }
+  .opts-plain  { color: var(--text-muted); }
+
+  .price-cell { font-weight: 700; color: var(--accent); font-size: 15px; }
+
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    color: var(--text-muted); font-size: 14px;
+  }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="page">
+  {% include "navbar.html" %}
+  <div class="main">
+    <div class="header">
+      <h1 class="title">Staff Dashboard</h1>
+      <p class="sub">Manage all print requests from students</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card" style="background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.3);animation-delay:0.05s">
+        <div><div class="stat-label">Pending</div><div class="stat-num" style="color:var(--yellow)" id="sPending">0</div></div>
+        <span style="font-size:26px">⏳</span>
+      </div>
+      <div class="stat-card" style="background:rgba(108,99,255,0.1);border:1px solid rgba(108,99,255,0.3);animation-delay:0.1s">
+        <div><div class="stat-label">Printing</div><div class="stat-num" style="color:var(--accent)" id="sPrinting">0</div></div>
+        <span style="font-size:26px">🖨️</span>
+      </div>
+      <div class="stat-card" style="background:rgba(62,207,142,0.1);border:1px solid rgba(62,207,142,0.3);animation-delay:0.15s">
+        <div><div class="stat-label">Completed</div><div class="stat-num" style="color:var(--green)" id="sCompleted">0</div></div>
+        <span style="font-size:26px">✅</span>
+      </div>
+      <div class="stat-card" style="background:var(--surface2);border:1px solid var(--border);animation-delay:0.2s">
+        <div><div class="stat-label">Total</div><div class="stat-num" id="sTotal">0</div></div>
+        <span style="font-size:26px">📋</span>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-row">
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+      <button class="filter-btn" data-filter="pending"   onclick="setFilter('pending')">Pending</button>
+      <button class="filter-btn" data-filter="printing"  onclick="setFilter('printing')">Printing</button>
+      <button class="filter-btn" data-filter="completed" onclick="setFilter('completed')">Completed</button>
+      <span class="auto-note">Auto-refreshes every 15s</span>
+    </div>
+
+    <!-- Table -->
+    <div id="tableArea"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Auth guard
+  const userRaw = localStorage.getItem('user');
+  if (!userRaw) { window.location.href = '/login'; }
+  const user = JSON.parse(userRaw || '{}');
+  if (!user.is_staff) { window.location.href = '/student'; }
+
+  let allJobs = [];
+  let activeFilter = 'all';
+
+  function setFilter(f) {
+    activeFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.filter === f);
+    });
+    renderTable();
+  }
+
+  async function fetchJobs() {
+    const res  = await fetch('/api/jobs?role=staff');
+    const data = await res.json();
+    allJobs = data.jobs || [];
+    renderStats();
+    renderTable();
+  }
+
+  function renderStats() {
+    document.getElementById('sPending').textContent   = allJobs.filter(j => j.status === 'pending').length;
+    document.getElementById('sPrinting').textContent  = allJobs.filter(j => j.status === 'printing').length;
+    document.getElementById('sCompleted').textContent = allJobs.filter(j => j.status === 'completed').length;
+    document.getElementById('sTotal').textContent     = allJobs.length;
+  }
+
+  function renderTable() {
+    const area    = document.getElementById('tableArea');
+    const filtered = activeFilter === 'all' ? allJobs : allJobs.filter(j => j.status === activeFilter);
+
+    if (filtered.length === 0) {
+      area.innerHTML = `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px">
+          <div class="empty-state">
+            <div class="empty-icon">🗂️</div>
+            No ${activeFilter !== 'all' ? activeFilter : ''} print jobs found.
+          </div>
+        </div>`;
+      return;
+    }
+
+    const rows = filtered.map((job, i) => {
+      const email    = (job.users && job.users.email) ? job.users.email : 'Unknown';
+      const filename = getFileName(job.file_url);
+      const price    = (job.total_price || 0).toFixed(2);
+      const date     = formatDate(job.created_at);
+      const statusCls= `status-${job.status}`;
+      const statusLbl= { pending:'Pending', printing:'Printing', completed:'Completed' }[job.status] || job.status;
+
+      let opts = '';
+      if (job.is_colour && job.is_double_sided) {
+        opts = `<span class="opts-tag opts-colour">🎨 Colour</span><span class="opts-tag opts-double">📑 Double-sided</span>`;
+      } else if (job.is_colour) {
+        opts = `<span class="opts-tag opts-colour">🎨 Colour</span>`;
+      } else if (job.is_double_sided) {
+        opts = `<span class="opts-tag opts-double">📑 Double-sided</span>`;
+      } else {
+        opts = `<span class="opts-tag opts-plain">B&W, Single</span>`;
+      }
+
+      let actions = '';
+      if (job.status === 'pending') {
+        actions = `<button class="action-btn start" onclick="updateStatus('${job.id}','printing')">Start Printing</button>`;
+      } else if (job.status === 'printing') {
+        actions = `<button class="action-btn done" onclick="updateStatus('${job.id}','completed')">Mark Complete</button>`;
+      } else {
+        actions = `<button class="action-btn del" onclick="deleteJob('${job.id}')">🗑 Delete (Collected)</button>`;
+      }
+
+      return `
+        <tr>
+          <td><span class="email-cell">${email}</span></td>
+          <td><a class="file-link" href="${job.file_url}" target="_blank" rel="noreferrer">📄 ${filename}</a></td>
+          <td><strong>${job.page_count || 1}</strong></td>
+          <td><strong>${job.copies}</strong></td>
+          <td>${opts}</td>
+          <td><span class="price-cell">₹${price}</span></td>
+          <td><span class="meta-text">${date}</span></td>
+          <td><span class="status-pill ${statusCls}">${statusLbl}</span></td>
+          <td><div class="action-row">${actions}</div></td>
+        </tr>`;
+    }).join('');
+
+    area.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th><th>File</th><th>Pages</th><th>Copies</th>
+              <th>Options</th><th>Price</th><th>Submitted</th>
+              <th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  async function updateStatus(id, status) {
+    await fetch(`/api/jobs/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    allJobs = allJobs.map(j => j.id === id ? { ...j, status } : j);
+    renderStats();
+    renderTable();
+  }
+
+  async function deleteJob(id) {
+    await fetch(`/api/jobs/${id}`, { method: 'DELETE' });
+    allJobs = allJobs.filter(j => j.id !== id);
+    renderStats();
+    renderTable();
+  }
+
+  function getFileName(url) {
+    try {
+      const parts = decodeURIComponent(url).split('/');
+      const last  = parts[parts.length - 1];
+      return last.split('_').slice(1).join('_') || last;
+    } catch { return 'document.pdf'; }
+  }
+
+  function formatDate(ts) {
+    return new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  fetchJobs();
+  setInterval(fetchJobs, 15000);
+</script>
+{% endblock %}

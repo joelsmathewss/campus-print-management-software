@@ -1,0 +1,67 @@
+<nav class="navbar">
+  <div class="nav-logo">
+    <span class="nav-icon">🖨️</span>
+    GetYourPrint
+  </div>
+  <div class="nav-right">
+    <span class="nav-email" id="navEmail"></span>
+    <span class="nav-badge" id="navBadge"></span>
+    <button class="nav-logout" id="logoutBtn">Log out</button>
+  </div>
+</nav>
+
+<style>
+  .navbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px; height: 64px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: "Syne", sans-serif; font-weight: 800;
+    font-size: 18px; letter-spacing: -0.03em;
+  }
+  .nav-icon { font-size: 20px; }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .nav-email { font-size: 13px; color: var(--text-muted); }
+  .nav-badge {
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .nav-badge.staff {
+    background: rgba(108,99,255,0.15); color: var(--accent);
+    border: 1px solid rgba(108,99,255,0.3);
+  }
+  .nav-badge.student {
+    background: rgba(62,207,142,0.15); color: var(--green);
+    border: 1px solid rgba(62,207,142,0.3);
+  }
+  .nav-logout {
+    padding: 7px 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-muted);
+    font-size: 13px; font-weight: 500;
+    transition: all 0.2s;
+  }
+  .nav-logout:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+
+<script>
+  (function() {
+    const raw = localStorage.getItem('user');
+    if (!raw) { window.location.href = '/login'; return; }
+    const user = JSON.parse(raw);
+    document.getElementById('navEmail').textContent = user.email;
+    const badge = document.getElementById('navBadge');
+    badge.textContent = user.is_staff ? 'Staff' : 'Student';
+    badge.className = 'nav-badge ' + (user.is_staff ? 'staff' : 'student');
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    });
+  })();
+</script>

@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+{% block title %}GetYourPrint — Student Dashboard{% endblock %}
+
+{% block head %}
+<!-- PDF.js for page count detection -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  .page { min-height: 100vh; background: var(--bg); }
+  .main { max-width: 860px; margin: 0 auto; padding: 40px 24px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
+
+  /* Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px;
+    animation: fadeUp 0.4s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .panel-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .panel-sub   { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+
+  /* Dropzone */
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 12px; padding: 28px 20px;
+    text-align: center;
+    background: var(--surface2);
+    transition: all 0.2s; cursor: pointer; margin-bottom: 16px;
+  }
+  .dropzone.drag { border-color: var(--accent); background: rgba(108,99,255,0.06); }
+  .drop-icon { font-size: 32px; margin-bottom: 8px; }
+  .drop-text { font-size: 14px; color: var(--text-muted); }
+  .drop-filename { font-size: 13px; color: var(--accent); margin-top: 6px; font-weight: 500; }
+  .drop-pages    { font-size: 12px; color: var(--green); margin-top: 4px; font-weight: 500; }
+  .drop-reading  { font-size: 12px; color: var(--accent); margin-top: 4px; }
+
+  /* Form */
+  .lbl {
+    display: block; font-size: 12px; font-weight: 600;
+    color: var(--text-muted); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  input[type=number], input[type=file] {
+    width: 100%; padding: 11px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    font-size: 15px; margin-bottom: 16px;
+    outline: none; transition: border-color 0.2s;
+  }
+  input[type=number]:focus { border-color: var(--accent); }
+  input[type=number].detected { border-color: rgba(62,207,142,0.3); background: rgba(62,207,142,0.05); }
+  #fileInput { display: none; }
+
+  .check-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+  .check-label { font-size: 14px; color: var(--text); cursor: pointer; user-select: none; }
+
+  .price-box {
+    background: rgba(108,99,255,0.1);
+    border: 1px solid rgba(108,99,255,0.3);
+    border-radius: 10px; padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .price-label { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .price-amount { font-size: 22px; font-weight: 800; font-family: "Syne"; color: var(--accent); }
+
+  .submit-btn {
+    width: 100%; padding: 13px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .submit-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  /* Stat cards */
+  .stat-stack { display: flex; flex-direction: column; gap: 16px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    animation: fadeUp 0.4s ease both;
+  }
+  .stat-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .stat-num { font-size: 28px; font-weight: 800; font-family: "Syne"; }
+  .stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+  /* Jobs section */
+  .section-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .section-sub   { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+  .jobs-list { display: flex; flex-direction: column; gap: 12px; }
+  .job-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    animation: fadeUp 0.3s ease both;
+    transition: border-color 0.2s;
+  }
+  .job-card:hover { border-color: var(--accent); }
+  .job-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .job-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .job-right { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+  .view-link { font-size: 12px; color: var(--text-muted); text-decoration: underline; }
+
+  .status-pill {
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  }
+  .status-pending  { background: rgba(245,200,66,0.1);  color: var(--yellow); border: 1px solid rgba(245,200,66,0.3); }
+  .status-printing { background: rgba(108,99,255,0.1); color: var(--accent); border: 1px solid rgba(108,99,255,0.3); }
+  .status-completed{ background: rgba(62,207,142,0.1);  color: var(--green);  border: 1px solid rgba(62,207,142,0.3); }
+
+  .alert { border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
+  .alert.error   { background: rgba(255,92,92,0.1); border: 1px solid rgba(255,92,92,0.3); color: var(--red); }
+  .alert.success { background: rgba(62,207,142,0.1); border: 1px solid rgba(62,207,142,0.3); color: var(--green); }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="page">
+  {% include "navbar.html" %}
+  <div class="main">
+    <div class="grid">
+      <!-- Submit Panel -->
+      <div class="panel">
+        <h2 class="panel-title">New Print Job</h2>
+        <p class="panel-sub">Upload a PDF and set your preferences</p>
+
+        <div id="alertBox"></div>
+
+        <form id="printForm" onsubmit="handleSubmit(event)">
+          <!-- Dropzone -->
+          <div class="dropzone" id="dropzone"
+               onclick="document.getElementById('fileInput').click()"
+               ondragover="onDragOver(event)"
+               ondragleave="onDragLeave()"
+               ondrop="onDrop(event)">
+            <div class="drop-icon" id="dropIcon">☁️</div>
+            <p class="drop-text" id="dropText">Drag & drop a PDF or click to browse</p>
+            <p class="drop-filename" id="dropFilename" style="display:none"></p>
+            <p class="drop-pages"   id="dropPages"    style="display:none"></p>
+            <p class="drop-reading" id="dropReading"  style="display:none">🔍 Reading PDF…</p>
+          </div>
+          <input type="file" id="fileInput" accept=".pdf" onchange="onFileSelect(event)"/>
+
+          <label class="lbl" id="pageLabel">Number of Pages</label>
+          <input type="number" id="pageCount" min="1" max="500" value="1" required/>
+
+          <label class="lbl">Number of Copies</label>
+          <input type="number" id="copies" min="1" max="100" value="1" required
+                 oninput="updatePrice()"/>
+
+          <div class="check-row">
+            <input type="checkbox" id="isColour" onchange="updatePrice()"/>
+            <label class="check-label" for="isColour">🎨 Colour Print (+₹1.50/page)</label>
+          </div>
+          <div class="check-row">
+            <input type="checkbox" id="isDouble" onchange="updatePrice()"/>
+            <label class="check-label" for="isDouble">📑 Double-Sided (Half pages charged)</label>
+          </div>
+
+          <div class="price-box">
+            <span class="price-label">Estimated Cost</span>
+            <span class="price-amount" id="priceDisplay">₹1.50</span>
+          </div>
+
+          <button class="submit-btn" type="submit" id="submitBtn">Submit Print Request</button>
+        </form>
+      </div>
+
+      <!-- Stats Panel -->
+      <div class="stat-stack" id="statsPanel">
+        <div class="stat-card" style="animation-delay:0.1s">
+          <div>
+            <div class="stat-label">Pending</div>
+            <div class="stat-num" style="color:var(--yellow)" id="statPending">0</div>
+          </div>
+          <div class="stat-icon" style="background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.3)">⏳</div>
+        </div>
+        <div class="stat-card" style="animation-delay:0.15s">
+          <div>
+            <div class="stat-label">Printing</div>
+            <div class="stat-num" style="color:var(--accent)" id="statPrinting">0</div>
+          </div>
+          <div class="stat-icon" style="background:rgba(108,99,255,0.1);border:1px solid rgba(108,99,255,0.3)">🖨️</div>
+        </div>
+        <div class="stat-card" style="animation-delay:0.2s">
+          <div>
+            <div class="stat-label">Completed</div>
+            <div class="stat-num" style="color:var(--green)" id="statCompleted">0</div>
+          </div>
+          <div class="stat-icon" style="background:rgba(62,207,142,0.1);border:1px solid rgba(62,207,142,0.3)">✅</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Jobs List -->
+    <h2 class="section-title">My Print Jobs</h2>
+    <p class="section-sub">Track the status of all your submitted jobs</p>
+    <div id="jobsList"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Auth guard
+  const userRaw = localStorage.getItem('user');
+  if (!userRaw) { window.location.href = '/login'; }
+  const user = JSON.parse(userRaw || '{}');
+  if (user.is_staff) { window.location.href = '/staff'; }
+
+  // PDF.js
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  let selectedFile = null;
+  let jobs = [];
+
+  // ── Price calculation ──────────────────────────────────────────────────────
+  function updatePrice() {
+    const pages  = parseInt(document.getElementById('pageCount').value) || 1;
+    const copies = parseInt(document.getElementById('copies').value) || 1;
+    const colour = document.getElementById('isColour').checked;
+    const dbl    = document.getElementById('isDouble').checked;
+    const pricePerPage = colour ? 3.0 : 1.5;
+    const effectivePages = dbl ? pages / 2 : pages;
+    const total = pricePerPage * effectivePages * copies;
+    document.getElementById('priceDisplay').textContent = '₹' + total.toFixed(2);
+  }
+  document.getElementById('pageCount').addEventListener('input', updatePrice);
+
+  // ── Dropzone ───────────────────────────────────────────────────────────────
+  function onDragOver(e) { e.preventDefault(); document.getElementById('dropzone').classList.add('drag'); }
+  function onDragLeave()  { document.getElementById('dropzone').classList.remove('drag'); }
+  function onDrop(e) {
+    e.preventDefault(); onDragLeave();
+    const f = e.dataTransfer.files[0];
+    if (f && f.type === 'application/pdf') loadFile(f);
+    else showAlert('error', 'Only PDF files are supported.');
+  }
+  function onFileSelect(e) {
+    const f = e.target.files[0];
+    if (f && f.type === 'application/pdf') loadFile(f);
+    else showAlert('error', 'Only PDF files are supported.');
+  }
+
+  async function loadFile(f) {
+    selectedFile = f;
+    document.getElementById('dropIcon').textContent = '📄';
+    document.getElementById('dropText').textContent = 'File selected';
+    document.getElementById('dropFilename').style.display = 'block';
+    document.getElementById('dropFilename').textContent = f.name;
+    document.getElementById('dropPages').style.display = 'none';
+    document.getElementById('dropReading').style.display = 'block';
+    document.getElementById('pageLabel').textContent = 'Number of Pages (Detecting…)';
+
+    try {
+      const buf = await f.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const n   = pdf.numPages;
+      document.getElementById('pageCount').value = n;
+      document.getElementById('pageCount').className = 'detected';
+      document.getElementById('dropReading').style.display = 'none';
+      document.getElementById('dropPages').style.display = 'block';
+      document.getElementById('dropPages').textContent = `✓ ${n} ${n === 1 ? 'page' : 'pages'} detected`;
+      document.getElementById('pageLabel').textContent = 'Number of Pages (Auto-detected)';
+      updatePrice();
+    } catch (err) {
+      document.getElementById('dropReading').style.display = 'none';
+      document.getElementById('pageLabel').textContent = 'Number of Pages';
+      showAlert('error', 'Could not read PDF. Please enter page count manually.');
+    }
+  }
+
+  // ── Submit ─────────────────────────────────────────────────────────────────
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!selectedFile) { showAlert('error', 'Please select a PDF file.'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = 'Uploading…';
+    clearAlert();
+
+    // 1. Upload to Supabase Storage via signed URL from Flask
+    const path = `${user.id}/${Date.now()}_${selectedFile.name}`;
+    let signRes;
+    try {
+      signRes = await fetch('/api/storage/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      });
+      if (!signRes.ok) throw new Error('Sign failed');
+    } catch {
+      showAlert('error', 'Could not initiate upload. Please try again.');
+      resetBtn(); return;
+    }
+
+    const signData = await signRes.json();
+    // signData has: signed_url (for upload) and token
+    const uploadUrl = signData.signed_url || (signData.data && signData.data.signed_url);
+
+    if (!uploadUrl) {
+      showAlert('error', 'Storage not configured. Check Supabase bucket.');
+      resetBtn(); return;
+    }
+
+    // 2. PUT the file directly to Supabase signed URL
+    try {
+      const uploadResp = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' },
+        body: selectedFile,
+      });
+      if (!uploadResp.ok) throw new Error('Upload failed: ' + uploadResp.status);
+    } catch (err) {
+      showAlert('error', 'File upload failed. ' + err.message);
+      resetBtn(); return;
+    }
+
+    // 3. Build public URL
+    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/print-files/${path}`;
+
+    // 4. Create job record
+    const pages  = parseInt(document.getElementById('pageCount').value);
+    const copies = parseInt(document.getElementById('copies').value);
+    const colour = document.getElementById('isColour').checked;
+    const dbl    = document.getElementById('isDouble').checked;
+    const pricePerPage = colour ? 3.0 : 1.5;
+    const totalPrice   = parseFloat((pricePerPage * (dbl ? pages / 2 : pages) * copies).toFixed(2));
+
+    const jobRes = await fetch('/api/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: user.id,
+        file_url: publicUrl,
+        copies,
+        page_count: pages,
+        is_colour: colour,
+        is_double_sided: dbl,
+        total_price: totalPrice,
+        status: 'pending',
+      }),
+    });
+
+    if (!jobRes.ok) {
+      showAlert('error', 'Could not submit print job.');
+      resetBtn(); return;
+    }
+
+    showAlert('success', 'Print job submitted successfully!');
+    selectedFile = null;
+    document.getElementById('dropIcon').textContent = '☁️';
+    document.getElementById('dropText').textContent = 'Drag & drop a PDF or click to browse';
+    document.getElementById('dropFilename').style.display = 'none';
+    document.getElementById('dropPages').style.display = 'none';
+    document.getElementById('pageCount').value = 1;
+    document.getElementById('pageCount').className = '';
+    document.getElementById('copies').value = 1;
+    document.getElementById('isColour').checked = false;
+    document.getElementById('isDouble').checked = false;
+    document.getElementById('pageLabel').textContent = 'Number of Pages';
+    document.getElementById('fileInput').value = '';
+    updatePrice();
+    fetchJobs();
+    resetBtn();
+  }
+
+  function resetBtn() {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = false; btn.textContent = 'Submit Print Request';
+  }
+
+  // ── Alerts ─────────────────────────────────────────────────────────────────
+  function showAlert(type, msg) {
+    document.getElementById('alertBox').innerHTML =
+      `<div class="alert ${type}">${msg}</div>`;
+  }
+  function clearAlert() { document.getElementById('alertBox').innerHTML = ''; }
+
+  // ── Fetch jobs ─────────────────────────────────────────────────────────────
+  async function fetchJobs() {
+    const res  = await fetch(`/api/jobs?user_id=${user.id}&role=student`);
+    const data = await res.json();
+    jobs = data.jobs || [];
+    renderStats();
+    renderJobs();
+  }
+
+  function renderStats() {
+    document.getElementById('statPending').textContent   = jobs.filter(j => j.status === 'pending').length;
+    document.getElementById('statPrinting').textContent  = jobs.filter(j => j.status === 'printing').length;
+    document.getElementById('statCompleted').textContent = jobs.filter(j => j.status === 'completed').length;
+  }
+
+  function renderJobs() {
+    const el = document.getElementById('jobsList');
+    if (jobs.length === 0) {
+      el.innerHTML = `<div class="panel empty"><div class="empty-icon">🗂️</div>No print jobs yet. Submit your first one above!</div>`;
+      return;
+    }
+    el.innerHTML = jobs.map(job => `
+      <div class="job-card">
+        <div>
+          <div class="job-name">${getFileName(job.file_url)}</div>
+          <div class="job-meta">
+            ${job.page_count || 1} pages × ${job.copies} ${job.copies === 1 ? 'copy' : 'copies'}
+            ${job.is_colour ? ' · Colour' : ''}
+            ${job.is_double_sided ? ' · Double-sided' : ''}
+            · ₹${(job.total_price || 0).toFixed(2)}
+            · ${formatDate(job.created_at)}
+          </div>
+        </div>
+        <div class="job-right">
+          <a class="view-link" href="${job.file_url}" target="_blank" rel="noreferrer">View PDF</a>
+          <span class="status-pill status-${job.status}">${statusLabel(job.status)}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function getFileName(url) {
+    try {
+      const parts = decodeURIComponent(url).split('/');
+      const last  = parts[parts.length - 1];
+      return last.split('_').slice(1).join('_') || last;
+    } catch { return 'document.pdf'; }
+  }
+
+  function formatDate(ts) {
+    return new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function statusLabel(s) {
+    return { pending: 'Pending', printing: 'Printing', completed: 'Completed' }[s] || s;
+  }
+
+  updatePrice();
+  fetchJobs();
+</script>
+{% endblock %}

@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}GetYourPrint — Sign In{% endblock %}
+
+{% block head %}
+<style>
+  .page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+  .glow {
+    position: absolute;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .glow2 {
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,101,132,0.06) 0%, transparent 70%);
+    top: 20%; right: 10%;
+    pointer-events: none;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px 44px;
+    width: 100%; max-width: 420px;
+    position: relative; z-index: 1;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    animation: fadeUp 0.5s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+  .logo-icon {
+    width: 38px; height: 38px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text {
+    font-family: "Syne", sans-serif;
+    font-weight: 800; font-size: 20px;
+    color: var(--text); letter-spacing: -0.03em;
+  }
+  h1.title { font-size: 28px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+  .sub { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; }
+  .tabs {
+    display: flex;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 4px; margin-bottom: 28px; gap: 4px;
+  }
+  .tab {
+    flex: 1; padding: 8px 0;
+    border: none; border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 600; font-size: 14px;
+    transition: all 0.2s;
+  }
+  .tab.active { background: var(--accent); color: #fff; }
+  .field { margin-bottom: 16px; }
+  label.lbl {
+    display: block; font-size: 12px; font-weight: 600;
+    color: var(--text-muted); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  input[type=email], input[type=password] {
+    width: 100%; padding: 12px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text); font-size: 15px;
+    outline: none; transition: border-color 0.2s;
+  }
+  input:focus { border-color: var(--accent); }
+  .check-row { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; margin-top: 4px; }
+  input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .check-label { font-size: 14px; color: var(--text-muted); cursor: pointer; }
+  .btn {
+    width: 100%; padding: 14px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 15px; font-weight: 600;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .alert {
+    border-radius: var(--radius-sm);
+    padding: 10px 14px; font-size: 13px; margin-bottom: 16px;
+  }
+  .alert.error {
+    background: rgba(255,92,92,0.1);
+    border: 1px solid rgba(255,92,92,0.3);
+    color: var(--red);
+  }
+  .alert.success {
+    background: rgba(62,207,142,0.1);
+    border: 1px solid rgba(62,207,142,0.3);
+    color: var(--green);
+  }
+  #staffRow { display: none; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="page">
+  <div class="glow"></div>
+  <div class="glow2"></div>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">🖨️</div>
+      <span class="logo-text">GetYourPrint</span>
+    </div>
+    <h1 class="title" id="authTitle">Welcome back</h1>
+    <p class="sub" id="authSub">Sign in to manage your print jobs</p>
+
+    <div class="tabs">
+      <button class="tab active" id="loginTab" onclick="switchMode('login')">Log In</button>
+      <button class="tab" id="signupTab" onclick="switchMode('signup')">Sign Up</button>
+    </div>
+
+    <div id="alertBox"></div>
+
+    <form id="authForm" onsubmit="handleSubmit(event)">
+      <div class="field">
+        <label class="lbl" for="email">Email</label>
+        <input type="email" id="email" placeholder="you@university.edu" required/>
+      </div>
+      <div class="field">
+        <label class="lbl" for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••" required/>
+      </div>
+      <div class="check-row" id="staffRow">
+        <input type="checkbox" id="isStaff"/>
+        <label class="check-label" for="isStaff">Register as staff member</label>
+      </div>
+      <button class="btn" type="submit" id="submitBtn">Sign In</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let mode = 'login';
+
+  function switchMode(m) {
+    mode = m;
+    document.getElementById('alertBox').innerHTML = '';
+    document.getElementById('loginTab').classList.toggle('active', m === 'login');
+    document.getElementById('signupTab').classList.toggle('active', m === 'signup');
+    document.getElementById('authTitle').textContent = m === 'login' ? 'Welcome back' : 'Create account';
+    document.getElementById('authSub').textContent = m === 'login'
+      ? 'Sign in to manage your print jobs'
+      : 'Join the campus printing system';
+    document.getElementById('submitBtn').textContent = m === 'login' ? 'Sign In' : 'Create Account';
+    document.getElementById('staffRow').style.display = m === 'signup' ? 'flex' : 'none';
+  }
+
+  function showAlert(type, msg) {
+    document.getElementById('alertBox').innerHTML =
+      `<div class="alert ${type}">${msg}</div>`;
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = 'Please wait…';
+
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const isStaff  = document.getElementById('isStaff').checked;
+
+    const endpoint = mode === 'login' ? '/api/login' : '/api/signup';
+    const body = mode === 'login'
+      ? { email, password }
+      : { email, password, is_staff: isStaff };
+
+    try {
+      const res  = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showAlert('error', data.error || 'Something went wrong.');
+        btn.disabled = false;
+        btn.textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+        return;
+      }
+
+      localStorage.setItem('user', JSON.stringify(data.user));
+      window.location.href = data.user.is_staff ? '/staff' : '/student';
+    } catch (err) {
+      showAlert('error', 'Network error. Please try again.');
+      btn.disabled = false;
+      btn.textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+    }
+  }
+
+  // Redirect if already logged in
+  const existingUser = localStorage.getItem('user');
+  if (existingUser) {
+    const u = JSON.parse(existingUser);
+    window.location.href = u.is_staff ? '/staff' : '/student';
+  }
+</script>
+{% endblock %}
